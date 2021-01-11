@@ -11,7 +11,7 @@ class EmojiArtDocument: ObservableObject {
     static var palette: String = "🙄💀😳"
     @Published private var emojiArt = EmojiArt()
     @Published private(set) var backgroundImage: UIImage?
-
+    var emojis: [EmojiArt.Emoji] {emojiArt.emojis}
     
     //MARK: Intents
     func addEmoji(_ emoji: String, at location: CGPoint, size: CGFloat) {
@@ -42,10 +42,22 @@ class EmojiArtDocument: ObservableObject {
             DispatchQueue.global(qos: .userInitiated).async {
                 if let imageData = try? Data(contentsOf: url) {
                     DispatchQueue.main.async {
-                        self.backgroundImage = UIImage(data: imageData)
+                        if url == self.emojiArt.backgroundURL {
+                            self.backgroundImage = UIImage(data: imageData)
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+extension EmojiArt.Emoji {
+    var fontSize: CGFloat {
+        CGFloat(self.size)
+    }
+    
+    var location: CGPoint {
+        CGPoint(x: CGFloat(self.x), y: CGFloat(self.y))
     }
 }
