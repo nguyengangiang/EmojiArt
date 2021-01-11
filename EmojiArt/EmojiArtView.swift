@@ -17,9 +17,27 @@ struct EmojiArtView: View {
                 }
             }
         }.padding()
-        Rectangle().foregroundColor(.green).ignoresSafeArea(edges: [/*@START_MENU_TOKEN@*/.bottom/*@END_MENU_TOKEN@*/, .horizontal])
-        
+        Rectangle().foregroundColor(.white).overlay(
+            Group {
+                if self.document.backgroundImage != nil {
+                    Image(uiImage: self.document.backgroundImage!)
+                }
+            }
+        )
+            .ignoresSafeArea(edges: [/*@START_MENU_TOKEN@*/.bottom/*@END_MENU_TOKEN@*/, .horizontal])
+            .onDrop(of: ["public.image"], isTargeted: nil) { providers, location in
+                return self.drop(providers: providers)
+            }
     }
     
-    let defaultEmojiSize: CGFloat = 40
+    private func drop(providers: [NSItemProvider]) -> Bool {
+        let found = providers.loadFirstObject(ofType: URL.self) { url in
+            print("dropped: \(url)")
+            self.document.setBackgroundURL(url)
+        }
+        return found
+    }
+    
+    private let defaultEmojiSize: CGFloat = 40
+
 }
