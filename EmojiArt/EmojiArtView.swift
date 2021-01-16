@@ -17,7 +17,6 @@ struct EmojiArtView: View {
                         .onDrag {
                             return NSItemProvider(object: emoji as NSString)
                         }
-
                 }
             }
         }.padding()
@@ -43,6 +42,7 @@ struct EmojiArtView: View {
                         .position(self.position(for: emoji, in: geometry.size))
                 }
             }
+            .clipped()
         }
     }
     
@@ -51,7 +51,8 @@ struct EmojiArtView: View {
     }
     
     private func position(for emoji: EmojiArt.Emoji, in size: CGSize) -> CGPoint {
-        CGPoint(x: emoji.location.x + size.width / 2, y: emoji.location.y + size.height / 2)
+        CGPoint(x: emoji.location.x + size.width / 2,
+                y: emoji.location.y + size.height / 2)
     }
     private func drop(providers: [NSItemProvider], at location: CGPoint) -> Bool {
         var found = providers.loadFirstObject(ofType: URL.self) { url in
@@ -65,8 +66,6 @@ struct EmojiArtView: View {
         }
         return found
     }
-    
-    
     
     private let defaultEmojiSize: CGFloat = 40
 
