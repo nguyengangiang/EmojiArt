@@ -52,20 +52,21 @@ class EmojiArtDocument: ObservableObject {
         fetchBackgroundImageData()
     }
     
-    func chooseEmoji(emoji: EmojiArt.Emoji) {
-        print("\(emoji.size)")
+    func toggleMatching(emoji: EmojiArt.Emoji) {
         if chosenEmojis.contains(matching: emoji) {
-            chosenEmojis.remove(emoji)
-            print("removed \(emoji)")
+            chosenEmojis.remove(at: chosenEmojis.firstIndex(matching: emoji)!)
         } else {
             chosenEmojis.insert(emoji)
-            print("inserted \(emoji)")
         }
     }
     
     func resetEmojis() {
         chosenEmojis.removeAll()
         emojiArt.resetEmojis()
+    }
+    
+    func deselectAllEmojis() {
+        chosenEmojis.removeAll()
     }
     
     func fetchBackgroundImageData() {
