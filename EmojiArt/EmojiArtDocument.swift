@@ -9,6 +9,7 @@ import SwiftUI
 
 class EmojiArtDocument: ObservableObject {
     static var palette: String = "🙄💀😳"
+    @Published var chosenEmojis = Set<EmojiArt.Emoji>()
     private var emojiArt = EmojiArt() {
         willSet {
             objectWillChange.send()
@@ -49,6 +50,22 @@ class EmojiArtDocument: ObservableObject {
     func setBackgroundURL(_ url: URL?) {
         emojiArt.backgroundURL = url?.imageURL
         fetchBackgroundImageData()
+    }
+    
+    func chooseEmoji(emoji: EmojiArt.Emoji) {
+        print("\(emoji.size)")
+        if chosenEmojis.contains(matching: emoji) {
+            chosenEmojis.remove(emoji)
+            print("removed \(emoji)")
+        } else {
+            chosenEmojis.insert(emoji)
+            print("inserted \(emoji)")
+        }
+    }
+    
+    func resetEmojis() {
+        chosenEmojis.removeAll()
+        emojiArt.resetEmojis()
     }
     
     func fetchBackgroundImageData() {

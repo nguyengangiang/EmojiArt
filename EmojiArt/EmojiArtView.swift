@@ -11,28 +11,37 @@ struct EmojiArtView: View {
     @ObservedObject var  document: EmojiArtDocument
     var body: some View {
         VStack {
-            ScrollView(.horizontal) {
-                HStack {
-                    ForEach(EmojiArtDocument.palette.map { String($0)}, id: \.self) { emoji in
-                        Text(emoji).font(Font.system(size: defaultEmojiSize))
-                            .onDrag {
-                                return NSItemProvider(object: emoji as NSString)
-                            }
+            HStack {
+                ScrollView(.horizontal) {
+                    HStack {
+                        ForEach(EmojiArtDocument.palette.map { String($0)}, id: \.self) { emoji in
+                            Text(emoji).font(Font.system(size: defaultEmojiSize))
+                                .onDrag {
+                                    return NSItemProvider(object: emoji as NSString)
+                                }
+                        }
                     }
-                }
-            }.padding()
+                }.padding()
+                Button("Reset") {document.resetEmojis()}
+            }
+
             GeometryReader { geometry in
                 ZStack {
-                    Rectangle().foregroundColor(.white).overlay(
+                    Rectangle().overlay(
                         OptionalImage(image: document.backgroundImage)
                             .scaleEffect(zoomScale)
                             .offset(panOffset)
                     )
                     .gesture(doubleTapToZoom(in: geometry.size))
+                    
                     ForEach(self.document.emojis) { emoji in
-                        Text(emoji.text)
+                        EmojiView(emoji: emoji, isSelected: document.chosenEmojis.contains(matching: emoji))
+                            .onTapGesture {
+                                document.chooseEmoji(emoji: emoji)
+                            }
                             .font(animatableWithSize: zoomScale * defaultEmojiSize)
                             .position(self.position(for: emoji, in: geometry.size))
+
                     }
                 }
                 .clipped()
@@ -116,5 +125,20 @@ struct EmojiArtView: View {
         return found
     }
     
-    private let defaultEmojiSize: CGFloat = 40
 }
+
+struct EmojiView: View {
+    var emoji: EmojiArt.Emoji
+    var isSelected: Bool
+    
+    var body: some View {
+        ZStack {
+            Text(emoji.text)
+            Circle().stroke(lineWidth: 5.0).foregroundColor(.orange).opacity(isSelected ? 1 : 0).frame(width: CGFloat(emoji.size), height: CGFloat(emoji.size), alignment: .center)
+        }
+    }
+    
+}
+
+private let defaultEmojiSize: CGFloat = 40
+
