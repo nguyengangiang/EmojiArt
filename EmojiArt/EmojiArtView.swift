@@ -14,6 +14,7 @@ struct EmojiArtView: View {
             HStack {
                 ScrollView(.horizontal) {
                     HStack {
+                        // emoji choosing palette
                         ForEach(EmojiArtDocument.palette.map { String($0)}, id: \.self) { emoji in
                             Text(emoji).font(Font.system(size: defaultEmojiSize))
                                 .onDrag {
@@ -22,11 +23,13 @@ struct EmojiArtView: View {
                         }
                     }
                 }.padding()
-                Button("Reset") {document.resetEmojis()}
+                // button to remove emojis shown on screen
+                Button("Reset Emoji") {document.resetEmojis()}
             }
 
             GeometryReader { geometry in
                 ZStack {
+                    // background
                     Rectangle().overlay(
                         OptionalImage(image: document.backgroundImage)
                             .scaleEffect(zoomScale)
@@ -34,6 +37,7 @@ struct EmojiArtView: View {
                     )
                     .gesture(doubleTapToZoom(in: geometry.size))
                     
+                    // emojis shown on screen
                     ForEach(self.document.emojis) { emoji in
                         EmojiView(emoji: emoji, isSelected: document.chosenEmojis.contains(matching: emoji), zoomScale: zoomScale)
                             .onTapGesture {
@@ -62,6 +66,7 @@ struct EmojiArtView: View {
         }
     }
     
+    // MARK: - zoom constants
     @State private var steadyStateZoomScale: CGFloat = 1.0
     @GestureState private var gestureZoomScale: CGFloat = 1.0
     private var zoomScale: CGFloat { document.chosenEmojis.isEmpty ? steadyStateZoomScale * gestureZoomScale : steadyStateZoomScale }
@@ -89,36 +94,40 @@ struct EmojiArtView: View {
     private func zoomGesture() -> some Gesture {
         MagnificationGesture()
             .onEnded { finalGestureScale in
+                // if no emoji is chosen then scale the whole document
                 if document.chosenEmojis.isEmpty {
                     steadyStateZoomScale *= finalGestureScale
                 } else {
+                    // scale only chosen emojis
                     for emoji in document.chosenEmojis {
                         document.scaleEmoji(emoji, by: finalGestureScale)
                     }
                 }
-                print("final scale: \(finalGestureScale)")
             }.updating($gestureZoomScale) { latestGestureScale, gestureZoomScale, transaction in
                 gestureZoomScale = latestGestureScale
             }
     }
     
+    // MARK: - pan constants
     @State private var steadyStatePanOffset: CGSize = .zero
     @GestureState private var gesturePanOffset: CGSize = .zero
     private var panOffset: CGSize { (steadyStatePanOffset + gesturePanOffset) * zoomScale }
-    
     @GestureState private var emojiGesturePanOffset: CGSize = .zero
     private var emojiPanOffset: CGSize { emojiGesturePanOffset * zoomScale }
     
     private func panGesture() -> some Gesture {
         DragGesture()
+            // update panOffset by the amount of dragging
             .onEnded { finalDragGestureValue in
                 steadyStatePanOffset = steadyStatePanOffset + finalDragGestureValue.translation / zoomScale
                 
             }.updating($gesturePanOffset) { latestGestureScale, gesturePanOffset, transaction in
+                // following user gesture
                 gesturePanOffset = latestGestureScale.translation / zoomScale
             }
     }
     
+    // move selected emojis
     private func moveSelectionGesture() -> some Gesture {
         DragGesture()
             .onEnded { finalDragGestureValue in
@@ -130,6 +139,7 @@ struct EmojiArtView: View {
             }
     }
     
+    // position emojis by panOffset and zoomScale
     private func position(for emoji: EmojiArt.Emoji, in size: CGSize) -> CGPoint {
         var location = CGPoint(x: emoji.location.x * zoomScale + size.width / 2 + panOffset.width,
                            y: emoji.location.y * zoomScale + size.height / 2 + panOffset.height)
@@ -140,14 +150,19 @@ struct EmojiArtView: View {
         return location
     }
     
+    // calculate emoji's font size
     private func fontSize(for emoji: EmojiArt.Emoji) -> CGFloat {
         if document.chosenEmojis.contains(matching: emoji) {
+            // if there are emojis chosen on screen
+            // update font for chosen emojis only
             return gestureZoomScale * CGFloat(emoji.size) * zoomScale
         } else {
+            // update font for every emoji on screen
             return zoomScale * CGFloat(emoji.size)
         }
     }
     
+    // import image from the internet and set as background
     private func drop(providers: [NSItemProvider], at location: CGPoint) -> Bool {
         var found = providers.loadFirstObject(ofType: URL.self) { url in
             print("dropped: \(url)")
@@ -162,6 +177,7 @@ struct EmojiArtView: View {
     }
 }
 
+// View for each emoji on screen
 struct EmojiView: View {
     var emoji: EmojiArt.Emoji
     var isSelected: Bool

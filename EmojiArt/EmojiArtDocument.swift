@@ -16,11 +16,13 @@ class EmojiArtDocument: ObservableObject {
         }
         didSet {
             print("json: \(emojiArt.json?.utf8 ?? "nil")")
+            // save the document into UserDefaults
             UserDefaults.standard.setValue(emojiArt.json, forKey: EmojiArtDocument.untitled)
         }
     }
     private static let untitled = "EmojiArtDocument.Untitled"
     
+    // initialize document from json and update its background
     init() {
         emojiArt = EmojiArt(json: UserDefaults.standard.data(forKey: EmojiArtDocument.untitled)) ?? EmojiArt()
         fetchBackgroundImageData()

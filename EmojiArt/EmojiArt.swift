@@ -11,6 +11,7 @@ struct EmojiArt: Codable {
     var backgroundURL: URL?
     var emojis = [Emoji]()
     
+    // struct representation of an emoji
     struct Emoji: Identifiable, Codable, Hashable {
         let text: String
         var x: Int
@@ -29,10 +30,12 @@ struct EmojiArt: Codable {
     }
     private var uniqueEmojiId: Int = 0
     
+    // encode each emojiArt as json
     var json: Data? {
         try? JSONEncoder().encode(self)
     }
     
+    // initialized emojiArt by its json
     init?(json: Data?) {
         if json != nil, let newEmojiArt = try? JSONDecoder().decode(EmojiArt.self, from: json!) {
             self = newEmojiArt
@@ -41,13 +44,16 @@ struct EmojiArt: Codable {
         }
     }
     
+    // empty initialization
     init() {}
     
+    // add emojis on screen
     mutating func addEmoji(_ text: String, x: Int, y: Int, size: Int) {
         uniqueEmojiId += 1
         emojis.append(Emoji(text: text, x: x, y: y, size: size, id: uniqueEmojiId))
     }
     
+    // remove all emojis on screen
     mutating func resetEmojis() {
         emojis.removeAll()
     }
