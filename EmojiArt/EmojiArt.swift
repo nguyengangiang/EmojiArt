@@ -26,7 +26,6 @@ struct EmojiArt: Codable {
             self.size = size
             self.id = id
         }
-        
     }
     private var uniqueEmojiId: Int = 0
     
@@ -57,4 +56,6 @@ struct EmojiArt: Codable {
     mutating func resetEmojis() {
         emojis.removeAll()
     }
+    
+
 }

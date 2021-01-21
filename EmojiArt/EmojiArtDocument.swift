@@ -22,6 +22,15 @@ class EmojiArtDocument: ObservableObject {
     }
     private static let untitled = "EmojiArtDocument.Untitled"
     
+    var backgroundURL: URL? {
+        get {
+            emojiArt.backgroundURL
+        } set {
+            emojiArt.backgroundURL = newValue
+            fetchBackgroundImageData()
+        }
+    }
+
     // initialize document from json and update its background
     init() {
         emojiArt = EmojiArt(json: UserDefaults.standard.data(forKey: EmojiArtDocument.untitled)) ?? EmojiArt()
@@ -49,10 +58,10 @@ class EmojiArtDocument: ObservableObject {
         }
     }
     
-    func setBackgroundURL(_ url: URL?) {
-        emojiArt.backgroundURL = url?.imageURL
-        fetchBackgroundImageData()
-    }
+//    func setBackgroundURL(_ url: URL?) {
+//        emojiArt.backgroundURL = url?.imageURL
+//        fetchBackgroundImageData()
+//    }
     
     func toggleMatching(emoji: EmojiArt.Emoji) {
         if chosenEmojis.contains(matching: emoji) {

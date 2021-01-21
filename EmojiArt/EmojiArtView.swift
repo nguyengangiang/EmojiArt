@@ -30,7 +30,9 @@ struct EmojiArtView: View {
             GeometryReader { geometry in
                 ZStack {
                     // background
-                    Rectangle().overlay(
+                    Rectangle()
+                        .foregroundColor(Color.white)
+                        .overlay(
                         OptionalImage(image: document.backgroundImage)
                             .scaleEffect(zoomScale)
                             .offset(panOffset)
@@ -38,14 +40,30 @@ struct EmojiArtView: View {
                     .gesture(doubleTapToZoom(in: geometry.size))
                     
                     // emojis shown on screen
-                    ForEach(self.document.emojis) { emoji in
-                        EmojiView(emoji: emoji, isSelected: document.chosenEmojis.contains(matching: emoji), zoomScale: zoomScale)
-                            .onTapGesture {
-                                document.toggleMatching(emoji: emoji)
+                    if !self.isLoading {
+                        ForEach(self.document.emojis) { emoji in
+                            if !document.chosenEmojis.contains(matching: emoji) {
+                                EmojiView(emoji: emoji, isSelected: document.chosenEmojis.contains(matching: emoji), zoomScale: zoomScale)
+                                    .font(animatableWithSize: fontSize(for: emoji))
+                                    .position(self.position(for: emoji, in: geometry.size))
+                                    .gesture(TapGesture(count: 1).onEnded {
+                                        document.toggleMatching(emoji: emoji)
+                                    }
+                                    .exclusively(before: movingUnselectedGesture(emoji: emoji))
+                                    )
+                            } else {
+                                EmojiView(emoji: emoji, isSelected: document.chosenEmojis.contains(matching: emoji), zoomScale: zoomScale)
+                                    .font(animatableWithSize: fontSize(for: emoji))
+                                    .position(self.position(for: emoji, in: geometry.size))
+                                    .gesture(TapGesture(count: 1).onEnded {
+                                        document.toggleMatching(emoji: emoji)
+                                    }
+                                    .exclusively(before: moveSelectionGesture())
+                                    )
                             }
-                            .font(animatableWithSize: fontSize(for: emoji))
-                            .position(self.position(for: emoji, in: geometry.size))
-                            .gesture(moveSelectionGesture())
+                        }
+                    } else {
+                        Image(systemName: "hourglass").imageScale(.large).spinning()
                     }
                 }
                 .clipped()
@@ -64,6 +82,10 @@ struct EmojiArtView: View {
             }
 
         }
+    }
+    
+    private var isLoading: Bool {
+        document.backgroundImage == nil && document.backgroundURL != nil
     }
     
     // MARK: - zoom constants
@@ -112,8 +134,12 @@ struct EmojiArtView: View {
     @State private var steadyStatePanOffset: CGSize = .zero
     @GestureState private var gesturePanOffset: CGSize = .zero
     private var panOffset: CGSize { (steadyStatePanOffset + gesturePanOffset) * zoomScale }
-    @GestureState private var emojiGesturePanOffset: CGSize = .zero
-    private var emojiPanOffset: CGSize { emojiGesturePanOffset * zoomScale }
+    @GestureState private var unchosenEmojiGesturePanOffset: CGSize = .zero
+    @GestureState private var chosenEmojiGesturePanOffset: CGSize = .zero
+
+    private var chosenEmojiPanOffset: CGSize { chosenEmojiGesturePanOffset * zoomScale }
+    private var unchosenEmojiPanOffset: CGSize { unchosenEmojiGesturePanOffset * zoomScale }
+
     
     private func panGesture() -> some Gesture {
         DragGesture()
@@ -134,20 +160,38 @@ struct EmojiArtView: View {
                 for emoji in document.chosenEmojis {
                     document.moveEmoji(emoji, by: finalDragGestureValue.translation / zoomScale)
                 }
-            }.updating($emojiGesturePanOffset) { latestGestureScale, emojiGesturePanOffset, transaction in
-                emojiGesturePanOffset = latestGestureScale.translation / zoomScale
+            }.updating($chosenEmojiGesturePanOffset) { latestGestureScale, chosenEmojiGesturePanOffset, transaction in
+                chosenEmojiGesturePanOffset = latestGestureScale.translation / zoomScale
             }
     }
     
+    private func movingUnselectedGesture(emoji: EmojiArt.Emoji) -> some Gesture {
+        DragGesture()
+            .updating($unchosenEmojiGesturePanOffset) {
+                latestGestureScale, unchosenEmojiGesturePanOffset, transation in
+                    unchosenEmojiGesturePanOffset = latestGestureScale.translation / zoomScale
+            }
+            .onEnded { finalDragGestureValue in
+                document.moveEmoji(emoji, by: finalDragGestureValue.translation / zoomScale)
+            }
+    }
+
     // position emojis by panOffset and zoomScale
     private func position(for emoji: EmojiArt.Emoji, in size: CGSize) -> CGPoint {
-        var location = CGPoint(x: emoji.location.x * zoomScale + size.width / 2 + panOffset.width,
+        let location = CGPoint(x: emoji.location.x * zoomScale + size.width / 2 + panOffset.width,
                            y: emoji.location.y * zoomScale + size.height / 2 + panOffset.height)
-        if (document.chosenEmojis.contains(matching: emoji)) {
-            location = CGPoint(x: location.x + emojiPanOffset.width,
-                               y: location.y + emojiPanOffset.height)
-        }
         return location
+    }
+    
+    private func location(for emoji: EmojiArt.Emoji) -> CGPoint {
+        if (document.chosenEmojis.contains(matching: emoji)) {
+            return CGPoint(x: emoji.location.x + chosenEmojiPanOffset.width,
+                               y: emoji.location.y + chosenEmojiPanOffset.height)
+        }
+        else {
+            return CGPoint(x: emoji.location.x + unchosenEmojiPanOffset.width,
+                               y: emoji.location.y + unchosenEmojiPanOffset.height)
+        }
     }
     
     // calculate emoji's font size
@@ -166,7 +210,8 @@ struct EmojiArtView: View {
     private func drop(providers: [NSItemProvider], at location: CGPoint) -> Bool {
         var found = providers.loadFirstObject(ofType: URL.self) { url in
             print("dropped: \(url)")
-            self.document.setBackgroundURL(url)
+            //document.setBackgroundURL(url)
+            document.backgroundURL = url
         }
         if !found {
             found = providers.loadObjects(ofType: String.self) { string in
@@ -185,7 +230,7 @@ struct EmojiView: View {
     
     var body: some View {
         ZStack {
-            Text(emoji.text).shadow(color: .red, radius: isSelected ? CGFloat(emoji.size) * zoomScale : 0)
+            Text(emoji.text).shadow(color: .orange, radius: isSelected ? defaultEmojiSize : 0)
         }
     }
 }
