@@ -9,22 +9,28 @@ import SwiftUI
 
 struct EmojiArtView: View {
     @ObservedObject var  document: EmojiArtDocument
+    @State private var chosenPalette: String = ""
+    
     var body: some View {
         VStack {
             HStack {
-                ScrollView(.horizontal) {
-                    HStack {
-                        // emoji choosing palette
-                        ForEach(EmojiArtDocument.palette.map { String($0)}, id: \.self) { emoji in
-                            Text(emoji).font(Font.system(size: defaultEmojiSize))
-                                .onDrag {
-                                    return NSItemProvider(object: emoji as NSString)
-                                }
+                PaletteChooser(document: document, chosenPalette: $chosenPalette)
+                HStack {
+                    ScrollView(.horizontal) {
+                        HStack {
+                            // emoji choosing palette
+                            ForEach(chosenPalette.map { String($0)}, id: \.self) { emoji in
+                                Text(emoji).font(Font.system(size: defaultEmojiSize))
+                                    .onDrag {
+                                        return NSItemProvider(object: emoji as NSString)
+                                    }
+                            }
                         }
                     }
-                }.padding()
-                // button to remove emojis shown on screen
-                Button("Reset Emoji") {document.resetEmojis()}
+                    .onAppear{self.chosenPalette = self.document.defaultPalette}
+                    // button to remove emojis shown on screen
+                    Button("Reset Emoji") {document.resetEmojis()}
+                }
             }
 
             GeometryReader { geometry in
@@ -68,6 +74,7 @@ struct EmojiArtView: View {
                 }
                 .clipped()
                 .ignoresSafeArea(edges: [/*@START_MENU_TOKEN@*/.bottom/*@END_MENU_TOKEN@*/, .horizontal])
+
                 .onDrop(of: ["public.image", "public.text"], isTargeted: nil) { providers, location in
                     var location = geometry.convert(location, from: .global)
                     location = CGPoint(x: location.x - geometry.size.width / 2,
@@ -79,6 +86,9 @@ struct EmojiArtView: View {
                 }
                 .gesture(panGesture())
                 .gesture(zoomGesture())
+                .onReceive(document.$backgroundImage) { image in
+                    zoomToFit(image, in: geometry.size)
+                }
             }
 
         }

@@ -6,21 +6,17 @@
 //
 
 import SwiftUI
+import Combine
 
 class EmojiArtDocument: ObservableObject {
     static var palette: String = "🙄💀😳"
     @Published var chosenEmojis = Set<EmojiArt.Emoji>()
-    private var emojiArt = EmojiArt() {
-        willSet {
-            objectWillChange.send()
-        }
-        didSet {
-            print("json: \(emojiArt.json?.utf8 ?? "nil")")
-            // save the document into UserDefaults
-            UserDefaults.standard.setValue(emojiArt.json, forKey: EmojiArtDocument.untitled)
-        }
-    }
+    @Published private var emojiArt = EmojiArt()
+    private var autoSaveCancellable: AnyCancellable?
     private static let untitled = "EmojiArtDocument.Untitled"
+    private var fetchImageCancellable: AnyCancellable?
+    @Published private(set) var backgroundImage: UIImage?
+    var emojis: [EmojiArt.Emoji] {emojiArt.emojis}
     
     var backgroundURL: URL? {
         get {
@@ -34,11 +30,13 @@ class EmojiArtDocument: ObservableObject {
     // initialize document from json and update its background
     init() {
         emojiArt = EmojiArt(json: UserDefaults.standard.data(forKey: EmojiArtDocument.untitled)) ?? EmojiArt()
+        autoSaveCancellable = $emojiArt.sink { emojiArt in
+            UserDefaults.standard.setValue(emojiArt.json, forKey: EmojiArtDocument.untitled)
+        }
         fetchBackgroundImageData()
     }
     
-    @Published private(set) var backgroundImage: UIImage?
-    var emojis: [EmojiArt.Emoji] {emojiArt.emojis}
+
     
     //MARK: Intents
     func addEmoji(_ emoji: String, at location: CGPoint, size: CGFloat) {
@@ -57,11 +55,6 @@ class EmojiArtDocument: ObservableObject {
             emojiArt.emojis[index].size = Int((CGFloat(emojiArt.emojis[index].size) * scale).rounded(.toNearestOrEven))
         }
     }
-    
-//    func setBackgroundURL(_ url: URL?) {
-//        emojiArt.backgroundURL = url?.imageURL
-//        fetchBackgroundImageData()
-//    }
     
     func toggleMatching(emoji: EmojiArt.Emoji) {
         if chosenEmojis.contains(matching: emoji) {
@@ -83,15 +76,11 @@ class EmojiArtDocument: ObservableObject {
     func fetchBackgroundImageData() {
         backgroundImage = nil
         if let url = self.emojiArt.backgroundURL {
-            DispatchQueue.global(qos: .userInitiated).async {
-                if let imageData = try? Data(contentsOf: url) {
-                    DispatchQueue.main.async {
-                        if url == self.emojiArt.backgroundURL {
-                            self.backgroundImage = UIImage(data: imageData)
-                        }
-                    }
-                }
-            }
+        fetchImageCancellable = URLSession.shared.dataTaskPublisher(for: url)
+                .map {data, urlResponse in UIImage(data: data)}
+                .receive(on: DispatchQueue.main)
+                .replaceError(with: nil)
+                .assign(to: \EmojiArtDocument.backgroundImage, on: self)
         }
     }
 }
