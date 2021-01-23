@@ -8,12 +8,22 @@
 import SwiftUI
 import Combine
 
-class EmojiArtDocument: ObservableObject {
+class EmojiArtDocument: ObservableObject, Hashable, Identifiable {
+    
+    static func == (lhs: EmojiArtDocument, rhs: EmojiArtDocument) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    let id: UUID
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
     static var palette: String = "🙄💀😳"
     @Published var chosenEmojis = Set<EmojiArt.Emoji>()
-    @Published private var emojiArt = EmojiArt()
+    @Published private var emojiArt: EmojiArt
     private var autoSaveCancellable: AnyCancellable?
-    private static let untitled = "EmojiArtDocument.Untitled"
     private var fetchImageCancellable: AnyCancellable?
     @Published private(set) var backgroundImage: UIImage?
     var emojis: [EmojiArt.Emoji] {emojiArt.emojis}
@@ -22,16 +32,18 @@ class EmojiArtDocument: ObservableObject {
         get {
             emojiArt.backgroundURL
         } set {
-            emojiArt.backgroundURL = newValue
+            emojiArt.backgroundURL = newValue?.imageURL
             fetchBackgroundImageData()
         }
     }
 
     // initialize document from json and update its background
-    init() {
-        emojiArt = EmojiArt(json: UserDefaults.standard.data(forKey: EmojiArtDocument.untitled)) ?? EmojiArt()
+    init(id: UUID? = nil) {
+        self.id = id ?? UUID()
+        let defaultsKey = "EmojiArtDocument.\(self.id.uuidString)"
+        emojiArt = EmojiArt(json: UserDefaults.standard.data(forKey: defaultsKey)) ?? EmojiArt()
         autoSaveCancellable = $emojiArt.sink { emojiArt in
-            UserDefaults.standard.setValue(emojiArt.json, forKey: EmojiArtDocument.untitled)
+            UserDefaults.standard.set(emojiArt.json, forKey: defaultsKey)
         }
         fetchBackgroundImageData()
     }
@@ -76,21 +88,18 @@ class EmojiArtDocument: ObservableObject {
     func fetchBackgroundImageData() {
         backgroundImage = nil
         if let url = self.emojiArt.backgroundURL {
-        fetchImageCancellable = URLSession.shared.dataTaskPublisher(for: url)
+            fetchImageCancellable?.cancel()
+            fetchImageCancellable = URLSession.shared.dataTaskPublisher(for: url)
                 .map {data, urlResponse in UIImage(data: data)}
                 .receive(on: DispatchQueue.main)
                 .replaceError(with: nil)
-                .assign(to: \EmojiArtDocument.backgroundImage, on: self)
+                .assign(to: \.backgroundImage, on: self)
         }
     }
 }
 
 extension EmojiArt.Emoji {
-    var fontSize: CGFloat {
-        CGFloat(self.size)
-    }
+    var fontSize: CGFloat {CGFloat(self.size)}
     
-    var location: CGPoint {
-        CGPoint(x: CGFloat(self.x), y: CGFloat(self.y))
-    }
+    var location: CGPoint {CGPoint(x: CGFloat(self.x), y: CGFloat(self.y))}
 }
