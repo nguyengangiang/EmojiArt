@@ -10,6 +10,8 @@ import SwiftUI
 struct EmojiArtDocumentView: View {
     @ObservedObject var  document: EmojiArtDocument
     @State private var chosenPalette: String = ""
+    @State private var explainbackgroundPaste: Bool = false
+    @State private var confirmBackgroundPaste: Bool = false
     
     init(document: EmojiArtDocument) {
         self.document = document
@@ -32,12 +34,30 @@ struct EmojiArtDocumentView: View {
                 }
                 // button to remove emojis shown on screen
                 Button("Reset Emoji") {document.resetEmojis()}
+                    .alert(isPresented: $confirmBackgroundPaste) {
+                        Alert(title: Text("Confirm background"),
+                              message: Text("Replace your background with \(UIPasteboard.general.url?.absoluteString ?? "nothing")"),
+                              primaryButton: .default(Text("OK"), action: {
+                                    document.backgroundURL = UIPasteboard.general.url }),
+                              secondaryButton: .cancel())
+                    }
             }
             .navigationBarItems(trailing: Button(action: {
-                if let url = UIPasteboard.general.url {
-                    document.backgroundURL = url
+                if let url = UIPasteboard.general.url, url != document.backgroundURL {
+                    confirmBackgroundPaste = true
+                } else {
+                    explainbackgroundPaste = true
                 }
-            }, label: { Image(systemName: "doc.on.clipboard").imageScale(.large) }))
+            }, label: {
+                Image(systemName: "doc.on.clipboard")
+                    .imageScale(.large)
+                    .alert(isPresented: $explainbackgroundPaste) {
+                        Alert(title: Text("Paste background"),
+                              message: Text("Copy the url of image to the clipboard and touch this button to make it the background of your document"),
+                              dismissButton: .default(Text("OK"))
+                        )
+                    }
+            }))
 
             
             GeometryReader { geometry in
@@ -103,9 +123,8 @@ struct EmojiArtDocumentView: View {
     }
     
     // MARK: - zoom constants
-    @State private var steadyStateZoomScale: CGFloat = 1.0
     @GestureState private var gestureZoomScale: CGFloat = 1.0
-    private var zoomScale: CGFloat { document.chosenEmojis.isEmpty ? steadyStateZoomScale * gestureZoomScale : steadyStateZoomScale }
+    private var zoomScale: CGFloat { document.chosenEmojis.isEmpty ? document.steadyStateZoomScale * gestureZoomScale : document.steadyStateZoomScale }
     
     private func doubleTapToZoom(in size: CGSize) -> some Gesture {
         TapGesture(count: 2)
@@ -119,11 +138,11 @@ struct EmojiArtDocumentView: View {
     }
     
     private func zoomToFit(_ image: UIImage?, in size: CGSize) {
-        steadyStatePanOffset = .zero
+        document.steadyStatePanOffset = .zero
         if let image = image, image.size.width > 0, image.size.height > 0, size.height > 0, size.width > 0 {
             let hZoom = size.width / image.size.width
             let vZoom = size.height / image.size.height
-            steadyStateZoomScale = min(hZoom, vZoom)
+            document.steadyStateZoomScale = min(hZoom, vZoom)
         }
     }
     
@@ -132,7 +151,7 @@ struct EmojiArtDocumentView: View {
             .onEnded { finalGestureScale in
                 // if no emoji is chosen then scale the whole document
                 if document.chosenEmojis.isEmpty {
-                    steadyStateZoomScale *= finalGestureScale
+                    document.steadyStateZoomScale *= finalGestureScale
                 } else {
                     // scale only chosen emojis
                     for emoji in document.chosenEmojis {
@@ -146,9 +165,8 @@ struct EmojiArtDocumentView: View {
     }
     
     // MARK: - pan constants
-    @State private var steadyStatePanOffset: CGSize = .zero
     @GestureState private var gesturePanOffset: CGSize = .zero
-    private var panOffset: CGSize { (steadyStatePanOffset + gesturePanOffset) * zoomScale }
+    private var panOffset: CGSize { (document.steadyStatePanOffset + gesturePanOffset) * zoomScale }
     @GestureState private var unchosenEmojiGesturePanOffset: CGSize = .zero
     @GestureState private var chosenEmojiGesturePanOffset: CGSize = .zero
 
@@ -160,7 +178,7 @@ struct EmojiArtDocumentView: View {
         DragGesture()
             // update panOffset by the amount of dragging
             .onEnded { finalDragGestureValue in
-                steadyStatePanOffset = steadyStatePanOffset + finalDragGestureValue.translation / zoomScale
+                document.steadyStatePanOffset = document.steadyStatePanOffset + finalDragGestureValue.translation / zoomScale
                 
             }.updating($gesturePanOffset) { latestGestureScale, gesturePanOffset, transaction in
                 // following user gesture

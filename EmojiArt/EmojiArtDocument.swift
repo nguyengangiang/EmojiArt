@@ -19,7 +19,9 @@ class EmojiArtDocument: ObservableObject, Hashable, Identifiable {
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
-    
+    @Published var steadyStateZoomScale: CGFloat = 1.0
+    @Published var steadyStatePanOffset: CGSize = .zero
+
     static var palette: String = "🙄💀😳"
     @Published var chosenEmojis = Set<EmojiArt.Emoji>()
     @Published private var emojiArt: EmojiArt
