@@ -69,6 +69,7 @@ struct EmojiArtDocumentView: View {
                             .offset(panOffset)
                     )
                     .gesture(doubleTapToZoom(in: geometry.size))
+                    .zIndex(-1)
                     
                     // emojis shown on screen
                     if !self.isLoading {
