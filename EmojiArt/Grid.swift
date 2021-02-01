@@ -30,7 +30,7 @@ struct Grid<Item, ID, ItemView>: View where ID: Hashable, ItemView: View{
     }
 }
 
-extension Grid where Item: Identifiable, ID == Item.ID {
+extension Grid where Item: Identifiable, ID == Item.ID  {
     init(_ items: [Item], viewForItem: @escaping (Item)->ItemView) {
         self.init(items, id: \Item.id, viewForItem: viewForItem)
     }

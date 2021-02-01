@@ -61,14 +61,13 @@ struct PaletteEditor: View {
                     TextField("Add Emoji", text: $emojisToAdd, onEditingChanged: { began in
                         if !began {
                             self.chosenPalette = self.document.addEmoji(emojisToAdd, toPalette: chosenPalette)
-                            print("\(self.chosenPalette)")
                             emojisToAdd = ""
                         }
                     })
                 }
                 Section(header: Text("Remove Emoji")) {
                     Grid (chosenPalette.map {String($0)}, id: \.self) { emoji in
-                        Text(emoji).font(Font.system(size: self.fontSize))
+                        Text(emoji).font(Font.system(size: fontSize))
                             .onTapGesture {
                                 self.chosenPalette = self.document.removeEmoji(emoji, fromPalette: self.chosenPalette)
                         }
@@ -83,10 +82,10 @@ struct PaletteEditor: View {
     }
     
     // MARK: Drawing constants
-    var height: CGFloat {
+    private var height: CGFloat {
         CGFloat((chosenPalette.count - 1) / 6) * 70 + 70
     }
     
-    var fontSize: CGFloat = 40
+    private let fontSize: CGFloat = 40
 }
 

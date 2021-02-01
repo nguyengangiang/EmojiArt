@@ -16,7 +16,9 @@ struct EmojiArtDocumentChooser: View {
             List {
                 ForEach(store.documents) { document in
                     NavigationLink(destination: EmojiArtDocumentView(document: document)                        .navigationBarTitle(store.name(for: document))) {
-                        EditableText(self.store.name(for: document), isEditing: editMode.isEditing) { name in
+                        EditableText(
+                            self.store.name(for: document),
+                            isEditing: editMode.isEditing) { name in
                             store.setName(name, for: document)
                         }
                     }
