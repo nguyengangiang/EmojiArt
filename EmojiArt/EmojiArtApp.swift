@@ -13,6 +13,7 @@ struct EmojiArtApp: App {
     var body: some Scene {
         let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
         let store = EmojiArtDocumentStore(directory: url)
+        store.addDocument()
         return WindowGroup {
             EmojiArtDocumentChooser().environmentObject(store)
         }
